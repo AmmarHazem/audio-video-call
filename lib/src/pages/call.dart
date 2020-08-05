@@ -10,10 +10,14 @@ class CallPage extends StatefulWidget {
   final String channelName;
 
   /// non-modifiable client role of the page
-  final ClientRole role;
+  // final ClientRole role;
 
   /// Creates a call page with given channel name.
-  const CallPage({Key key, this.channelName, this.role}) : super(key: key);
+  const CallPage({
+    Key key,
+    this.channelName,
+    // this.role,
+  }) : super(key: key);
 
   @override
   _CallPageState createState() => _CallPageState();
@@ -22,6 +26,7 @@ class CallPage extends StatefulWidget {
 class _CallPageState extends State<CallPage> {
   static final _users = <int>[];
   final _infoStrings = <String>[];
+  var _enableVideo = false;
   bool muted = false;
 
   @override
@@ -64,25 +69,29 @@ class _CallPageState extends State<CallPage> {
   /// Create agora sdk instance and initialize
   Future<void> _initAgoraRtcEngine() async {
     await AgoraRtcEngine.create(APP_ID);
-    await AgoraRtcEngine.enableVideo();
-    await AgoraRtcEngine.setChannelProfile(ChannelProfile.LiveBroadcasting);
-    await AgoraRtcEngine.setClientRole(widget.role);
+    // await AgoraRtcEngine.enableVideo();
+    await AgoraRtcEngine.enableAudio();
+    await AgoraRtcEngine.setChannelProfile(ChannelProfile.Communication);
+    // await AgoraRtcEngine.setClientRole(widget.role);
   }
 
   /// Add agora event handlers
   void _addAgoraEventHandlers() {
     AgoraRtcEngine.onError = (dynamic code) {
+      print('---- onError');
       setState(() {
         final info = 'onError: $code';
         _infoStrings.add(info);
       });
     };
 
+    // when I join the channel
     AgoraRtcEngine.onJoinChannelSuccess = (
       String channel,
       int uid,
       int elapsed,
     ) {
+      print('---- onJoinChannelSuccess $uid $elapsed');
       setState(() {
         final info = 'onJoinChannel: $channel, uid: $uid';
         _infoStrings.add(info);
@@ -90,6 +99,7 @@ class _CallPageState extends State<CallPage> {
     };
 
     AgoraRtcEngine.onLeaveChannel = () {
+      print('---- onLeaveChannel');
       setState(() {
         _infoStrings.add('onLeaveChannel');
         _users.clear();
@@ -97,6 +107,7 @@ class _CallPageState extends State<CallPage> {
     };
 
     AgoraRtcEngine.onUserJoined = (int uid, int elapsed) {
+      print('---- onUserJoined $uid $elapsed');
       setState(() {
         final info = 'userJoined: $uid';
         _infoStrings.add(info);
@@ -105,11 +116,15 @@ class _CallPageState extends State<CallPage> {
     };
 
     AgoraRtcEngine.onUserOffline = (int uid, int reason) {
+      print('---- onUserOffline');
       setState(() {
         final info = 'userOffline: $uid';
         _infoStrings.add(info);
         _users.remove(uid);
       });
+      if (_users.isEmpty) {
+        Navigator.pop(context);
+      }
     };
 
     AgoraRtcEngine.onFirstRemoteVideoFrame = (
@@ -118,19 +133,42 @@ class _CallPageState extends State<CallPage> {
       int height,
       int elapsed,
     ) {
+      print('---- onFirstRemoteVideoFrame');
       setState(() {
         final info = 'firstRemoteVideo: $uid ${width}x $height';
         _infoStrings.add(info);
       });
     };
+
+    AgoraRtcEngine.onRemoteVideoStateChanged = (
+      int uid,
+      int width,
+      int height,
+      int elapsed,
+    ) {
+      print('---- onRemoteVideoStateChanged');
+    };
+
+    AgoraRtcEngine.onRemoteVideoStats = (status) {
+      print('--- onRemoteVideoStats');
+    };
+  }
+
+  void _toggleVideo() {
+    setState(() {
+      _enableVideo = !_enableVideo;
+    });
+    if (_enableVideo) {
+      AgoraRtcEngine.enableVideo();
+    } else {
+      AgoraRtcEngine.disableVideo();
+    }
   }
 
   /// Helper function to get list of native views
   List<Widget> _getRenderViews() {
     final List<AgoraRenderWidget> list = [];
-    if (widget.role == ClientRole.Broadcaster) {
-      list.add(AgoraRenderWidget(0, local: true, preview: true));
-    }
+    list.add(AgoraRenderWidget(0, local: true, preview: true));
     _users.forEach((int uid) => list.add(AgoraRenderWidget(uid)));
     return list;
   }
@@ -153,6 +191,7 @@ class _CallPageState extends State<CallPage> {
   /// Video layout wrapper
   Widget _viewRows() {
     final views = _getRenderViews();
+    // print(views);
     switch (views.length) {
       case 1:
         return Container(
@@ -190,7 +229,7 @@ class _CallPageState extends State<CallPage> {
 
   /// Toolbar layout
   Widget _toolbar() {
-    if (widget.role == ClientRole.Audience) return Container();
+    // if (widget.role == ClientRole.Audience) return Container();
     return Container(
       alignment: Alignment.bottomCenter,
       padding: const EdgeInsets.symmetric(vertical: 48),
@@ -202,7 +241,7 @@ class _CallPageState extends State<CallPage> {
             child: Icon(
               muted ? Icons.mic_off : Icons.mic,
               color: muted ? Colors.white : Colors.blueAccent,
-              size: 20.0,
+              size: 30.0,
             ),
             shape: CircleBorder(),
             elevation: 2.0,
@@ -214,25 +253,38 @@ class _CallPageState extends State<CallPage> {
             child: Icon(
               Icons.call_end,
               color: Colors.white,
-              size: 35.0,
+              size: 30.0,
             ),
             shape: CircleBorder(),
             elevation: 2.0,
             fillColor: Colors.redAccent,
-            padding: const EdgeInsets.all(15.0),
+            padding: const EdgeInsets.all(12.0),
           ),
           RawMaterialButton(
-            onPressed: _onSwitchCamera,
+            onPressed: _toggleVideo,
             child: Icon(
-              Icons.switch_camera,
-              color: Colors.blueAccent,
-              size: 20.0,
+              Icons.camera_alt,
+              color: _enableVideo ? Colors.white : Colors.blueAccent,
+              size: 30.0,
             ),
             shape: CircleBorder(),
             elevation: 2.0,
-            fillColor: Colors.white,
+            fillColor: _enableVideo ? Colors.redAccent : Colors.white,
             padding: const EdgeInsets.all(12.0),
-          )
+          ),
+          if (_enableVideo)
+            RawMaterialButton(
+              onPressed: _onSwitchCamera,
+              child: Icon(
+                Icons.switch_camera,
+                color: Colors.blueAccent,
+                size: 30.0,
+              ),
+              shape: CircleBorder(),
+              elevation: 2.0,
+              fillColor: Colors.white,
+              padding: const EdgeInsets.all(12.0),
+            ),
         ],
       ),
     );
@@ -242,7 +294,7 @@ class _CallPageState extends State<CallPage> {
   Widget _panel() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 48),
-      alignment: Alignment.bottomCenter,
+      alignment: Alignment.topCenter,
       child: FractionallySizedBox(
         heightFactor: 0.5,
         child: Container(
@@ -307,18 +359,79 @@ class _CallPageState extends State<CallPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Agora Flutter QuickStart'),
+        title: Text(widget.channelName),
       ),
-      backgroundColor: Colors.black,
+      // backgroundColor: Colors.black,
       body: Center(
         child: Stack(
           children: <Widget>[
-            _viewRows(),
-            _panel(),
+            if (_enableVideo) _viewRows(),
+            // _panel(),
             _toolbar(),
+            Positioned(
+              top: 30,
+              left: 0,
+              right: 0,
+              child: CallTimer(),
+            ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class CallTimer extends StatefulWidget {
+  const CallTimer({
+    Key key,
+  }) : super(key: key);
+
+  @override
+  _CallTimerState createState() => _CallTimerState();
+}
+
+class _CallTimerState extends State<CallTimer> {
+  var _currentTime = Duration.zero;
+  Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+
+    Timer.periodic(Duration(seconds: 1), (timer) {
+      _timer = timer;
+      setState(() {
+        _currentTime = Duration(seconds: _currentTime.inSeconds + 1);
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final minutes = _currentTime.inMinutes;
+    final seconds = _currentTime.inSeconds % 60;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        Text(
+          '$minutes:$seconds',
+          style: TextStyle(
+            fontSize: 20,
+            shadows: [
+              Shadow(
+                blurRadius: 4,
+                color: Colors.white,
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

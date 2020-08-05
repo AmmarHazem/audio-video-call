@@ -31,7 +31,7 @@ class IndexState extends State<IndexPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Agora Flutter QuickStart'),
+        title: Text('Enter channel name'),
       ),
       body: Center(
         child: Container(
@@ -50,39 +50,39 @@ class IndexState extends State<IndexPage> {
                       border: UnderlineInputBorder(
                         borderSide: BorderSide(width: 1),
                       ),
-                      hintText: 'Channel name',
+                      labelText: 'Channel name',
                     ),
                   ))
                 ],
               ),
-              Column(
-                children: [
-                  ListTile(
-                    title: Text(ClientRole.Broadcaster.toString()),
-                    leading: Radio(
-                      value: ClientRole.Broadcaster,
-                      groupValue: _role,
-                      onChanged: (ClientRole value) {
-                        setState(() {
-                          _role = value;
-                        });
-                      },
-                    ),
-                  ),
-                  ListTile(
-                    title: Text(ClientRole.Audience.toString()),
-                    leading: Radio(
-                      value: ClientRole.Audience,
-                      groupValue: _role,
-                      onChanged: (ClientRole value) {
-                        setState(() {
-                          _role = value;
-                        });
-                      },
-                    ),
-                  )
-                ],
-              ),
+              // Column(
+              //   children: [
+              //     ListTile(
+              //       title: Text(ClientRole.Broadcaster.toString()),
+              //       leading: Radio(
+              //         value: ClientRole.Broadcaster,
+              //         groupValue: _role,
+              //         onChanged: (ClientRole value) {
+              //           setState(() {
+              //             _role = value;
+              //           });
+              //         },
+              //       ),
+              //     ),
+              //     ListTile(
+              //       title: Text(ClientRole.Audience.toString()),
+              //       leading: Radio(
+              //         value: ClientRole.Audience,
+              //         groupValue: _role,
+              //         onChanged: (ClientRole value) {
+              //           setState(() {
+              //             _role = value;
+              //           });
+              //         },
+              //       ),
+              //     )
+              //   ],
+              // ),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 20),
                 child: Row(
@@ -113,6 +113,7 @@ class IndexState extends State<IndexPage> {
           : _validateError = false;
     });
     if (_channelController.text.isNotEmpty) {
+      FocusScope.of(context).unfocus();
       // await for camera and mic permissions before pushing video page
       await _handleCameraAndMic();
       // push video page with given channel name
@@ -121,7 +122,7 @@ class IndexState extends State<IndexPage> {
         MaterialPageRoute(
           builder: (context) => CallPage(
             channelName: _channelController.text,
-            role: _role,
+            // role: _role,
           ),
         ),
       );
